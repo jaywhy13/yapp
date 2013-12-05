@@ -1,0 +1,56 @@
+*.py[co~]
+*.py\#
+*~
+*.db
+
+# Packages
+*.egg
+*.egg-info
+dist
+build
+eggs
+parts
+bin
+var
+include
+lib
+local
+migrations
+sdist
+develop-eggs
+.installed.cfg
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+.coverage
+.tox
+
+#Translations
+*.mo
+
+#Mr Developer
+.mr.developer.cfg
+
+# ignore sublime text project files
+*.sublime-project
+*.sublime-workspace
+
+#ignore supervisord
+supervisord.log*
+supervisord.pid
+
+#ignore rendered dust templates
+inventory/static/js/templates.js
+
+logs/
+local_settings.py*
+settings_local.py
+settings_install.py
+static_root/
+nexmo_keys.js
+
+node_modules/
+config.js
+/.project
