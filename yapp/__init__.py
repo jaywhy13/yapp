@@ -38,7 +38,8 @@ stack = []
 
 def get_grammar(save_token_function=lambda: None):
 	expr = Forward()
-	atom = ( ( decimal | integer | ident ).setParseAction(save_token_function) | (lbrace + expr.suppress() + rbrace) )
+	atom = ( ( decimal | integer | ident ).setParseAction(save_token_function) | 
+		(lbrace + expr.suppress() + rbrace) | (ident + lbrace + expr.suppress() + rbrace))
 
 	factor = Forward()
 	factor << atom + ZeroOrMore( (exponent + factor).setParseAction(save_token_function) )
@@ -61,6 +62,8 @@ op_map = {
 }
 
 def reduce_stack(stack, environment={}):
+	""" Reduces the contents of the stack to return a value
+	"""
 	op = stack.pop()
 	if op in "+-*/^%":
 		op2 = reduce_stack(stack)
@@ -69,14 +72,46 @@ def reduce_stack(stack, environment={}):
 	elif re.search('^[a-zA-Z][a-zA-Z0-9_]*$', op):
 		if op in environment:
 			return environment.get(op)
+		else:
+			return None # throw an exception instead
 	elif re.search('^[-+]?[0-9]+$', op):
 		return long(op)
 	else:
 		return float(op)
 
-def parse(expr, environment={}):
+def verify_stack(stack, environment={}):
+	""" Checks that all the variables and functions exist
+	"""
+	op = stack.pop()
+	if op in "+-*/^%":
+		op2 = reduce_stack(stack)
+		op1 = reduce_stack(stack)
+		return op1 and op2
+	elif re.search('^[a-zA-Z][a-zA-Z0-9_]*$', op):
+		if op not in environment:
+			return False
+		else:
+			return True
+	elif re.search('^[-+]?[0-9]+$', op):
+		return True
+	else:
+		return True
+
+def evaluate(expr, environment={}):
 	stack = []
 	grammar = get_grammar(lambda s,l,tokens: stack.append(tokens[0]))
 	result = grammar.parseString(expr)
 	value = reduce_stack(stack, environment=environment)
 	return value
+
+def verify(expr, environment={}):
+	stack = []
+	grammar = get_grammar(lambda s,l,tokens: stack.append(tokens[0]))
+	grammar.parseString(expr)
+	return verify_stack(stack, environment=environment)
+
+
+
+
+
+

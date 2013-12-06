@@ -26,7 +26,7 @@ class YappTest(TestCase):
 	    	# these should give no errors
     		stack[:] = []
     		result = get_grammar().parseString(test)
-    		value = parse(test)
+    		value = evaluate(test)
     		if not re.search("[a-zA-Z]+", test):
     			test = test.replace("^", "**")
     			self.assertEquals(value, eval(test))
