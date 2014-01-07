@@ -32,9 +32,8 @@ class YappTest(TestCase):
     			self.assertEquals(value, eval(test))
     		#print("Stack after: %s = %s, result = %s" % (test, stack, result))
 
-
-
-
-
-
-
+        # Start testing functions
+        environment = {
+            "foo" : lambda : 24
+        }
+        value = parse("foo()", environment)

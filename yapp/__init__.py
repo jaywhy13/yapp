@@ -2,6 +2,7 @@ import re
 
 from pyparsing import (
 	Word, Literal, alphas, alphanums, nums, Optional,
+	delimitedList, Group,
 	Combine,
 	StringEnd,
 	ZeroOrMore,
@@ -26,6 +27,7 @@ mult = Literal("*")
 divide = Literal("/")
 exponent = Literal("^")
 mod = Literal("%")
+inop = Literal("in")
 plusminus = plus | minus
 multdivide = mult | divide | mod
 
@@ -38,9 +40,16 @@ stack = []
 
 def get_grammar(save_token_function=lambda: None):
 	expr = Forward()
-	atom = ( ( decimal | integer | ident ).setParseAction(save_token_function) | (lbrace + expr.suppress() + rbrace) )
+	atom = Forward()
+	arg = ident
+	args = delimitedList(ident)
+
+	func_call = (ident + lbrace + Optional(args) + rbrace).setParseAction(save_token_function)
+
+	atom << (func_call | (lbrace + expr.suppress() + rbrace) | ( decimal | integer | ident ).setParseAction(save_token_function) )
 
 	factor = Forward()
+
 	factor << atom + ZeroOrMore( (exponent + factor).setParseAction(save_token_function) )
 
 	term = factor + ZeroOrMore( (multdivide + factor).setParseAction(save_token_function) )
@@ -57,10 +66,14 @@ op_map = {
 	"*" : lambda a,b: a * b,
 	"/" : lambda a,b: a / b,
 	"%" : lambda a,b: a % b,
-	"^" : lambda a,b: a ** b
+	"^" : lambda a,b: a ** b,
+	"in" : lambda a,b: a in b
 }
 
 def reduce_stack(stack, environment={}):
+	""" Reduces what's currently on the stack to a value
+	"""
+	print("Reducing stack: %s" % stack)
 	op = stack.pop()
 	if op in "+-*/^%":
 		op2 = reduce_stack(stack)
@@ -76,7 +89,12 @@ def reduce_stack(stack, environment={}):
 
 def parse(expr, environment={}):
 	stack = []
-	grammar = get_grammar(lambda s,l,tokens: stack.append(tokens[0]))
+	def append_tokens(s, l, tokens):
+		print("Save token called with: %s, %s, %s" % (s, l, tokens))
+		stack.append(tokens[0])
+		#print("Adding token: %s" % tokens[0])
+
+	grammar = get_grammar(append_tokens)
 	result = grammar.parseString(expr)
 	value = reduce_stack(stack, environment=environment)
 	return value
