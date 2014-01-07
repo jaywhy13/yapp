@@ -1,4 +1,5 @@
 import re
+import inspect
 
 from pyparsing import (
 	Word, Literal, alphas, alphanums, nums, Optional,
@@ -41,8 +42,8 @@ stack = []
 def get_grammar(save_token_function=lambda: None):
 	expr = Forward()
 	atom = Forward()
-	arg = ident
-	args = delimitedList(ident)
+	arg = expr
+	args = delimitedList(arg)
 
 	func_call = (ident + lbrace + Optional(args) + rbrace).setParseAction(save_token_function)
 
@@ -73,7 +74,6 @@ op_map = {
 def reduce_stack(stack, environment={}):
 	""" Reduces what's currently on the stack to a value
 	"""
-	print("Reducing stack: %s" % stack)
 	op = stack.pop()
 	if op in "+-*/^%":
 		op2 = reduce_stack(stack)
@@ -81,7 +81,16 @@ def reduce_stack(stack, environment={}):
 		return op_map[op](op1, op2)
 	elif re.search('^[a-zA-Z][a-zA-Z0-9_]*$', op):
 		if op in environment:
-			return environment.get(op)
+			val = environment.get(op)
+			if inspect.ismethod(val) or inspect.isfunction(val):
+				argspec = inspect.getargspec(val)
+				args = []
+				num_args = len(argspec.args)
+				for i in range(num_args):
+					args.append(reduce_stack(stack))
+				args.reverse()
+				return val(*args)
+			return val
 	elif re.search('^[-+]?[0-9]+$', op):
 		return long(op)
 	else:
@@ -90,7 +99,6 @@ def reduce_stack(stack, environment={}):
 def parse(expr, environment={}):
 	stack = []
 	def append_tokens(s, l, tokens):
-		print("Save token called with: %s, %s, %s" % (s, l, tokens))
 		stack.append(tokens[0])
 		#print("Adding token: %s" % tokens[0])
 

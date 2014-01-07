@@ -34,6 +34,13 @@ class YappTest(TestCase):
 
         # Start testing functions
         environment = {
-            "foo" : lambda : 24
+            "foo" : lambda : 2,
+            "times2" : lambda x : x*2,
+            "minus" : lambda x,y: x-y,
+            "minus3" : lambda x,y,z : x-y-z
         }
-        value = parse("foo()", environment)
+        self.assertEqual(parse("foo()", environment), 2)
+        self.assertEqual(parse("times2(2)", environment), 4)
+        self.assertEqual(parse("minus(5,2)", environment), 3)
+        self.assertEqual(parse("minus(5*5,2*2)", environment), 21)
+        self.assertEqual(parse("minus3(10,5,2)", environment), 3)
