@@ -1,6 +1,7 @@
 from django.test import TestCase
 
 from yapp import *
+from yapp.exceptions import *
 
 class YappTest(TestCase):
     def test_yapp(self):
@@ -37,10 +38,31 @@ class YappTest(TestCase):
             "foo" : lambda : 2,
             "times2" : lambda x : x*2,
             "minus" : lambda x,y: x-y,
-            "minus3" : lambda x,y,z : x-y-z
+            "minus3" : lambda x,y,z : x-y-z,
+            "x" : 2
         }
         self.assertEqual(parse("foo()", environment), 2)
         self.assertEqual(parse("times2(2)", environment), 4)
         self.assertEqual(parse("minus(5,2)", environment), 3)
         self.assertEqual(parse("minus(5*5,2*2)", environment), 21)
         self.assertEqual(parse("minus3(10,5,2)", environment), 3)
+        self.assertEqual(parse("x * 2", environment), 4)
+        self.assertEqual(parse("x ^ 3", environment), 8)
+        self.assertEqual(parse("x < 3", environment), True)
+        self.assertEqual(parse("x > 3", environment), False)
+
+        # test variables required
+        self.assertEqual(["x"], get_variables("x > 3"))
+
+        # test validity checking
+        self.assertTrue(is_valid("x * 2", environment))
+        self.assertFalse(is_valid("x * 2")) # no env
+        self.assertFalse(is_valid("x * ", environment))
+
+        # test syntax error exception
+        with self.assertRaises(ParseError):
+            parse("2 / ", fail_silently=False)
+
+        # test syntax error exception
+        with self.assertRaises(VariableMissingException):
+            parse("x * 2 ", fail_silently=False)
