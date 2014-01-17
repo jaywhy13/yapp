@@ -39,7 +39,8 @@ class YappTest(TestCase):
             "times2" : lambda x : x*2,
             "minus" : lambda x,y: x-y,
             "minus3" : lambda x,y,z : x-y-z,
-            "x" : 2
+            "x" : 2,
+            "abool" : True
         }
         self.assertEqual(parse("foo()", environment), 2)
         self.assertEqual(parse("times2(2)", environment), 4)
@@ -66,3 +67,7 @@ class YappTest(TestCase):
         # test syntax error exception
         with self.assertRaises(VariableMissingException):
             parse("x * 2 ", fail_silently=False)
+
+        # test booleans
+        self.assertTrue(parse("abool", environment))
+        self.assertFalse(parse("not(abool)", environment))

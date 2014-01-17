@@ -85,6 +85,10 @@ op_map = {
 	"<=" : lambda a,b : a <= b,
 }
 
+function_map = {
+	"not" : lambda x: not x
+}
+
 VARIABLE_REGEX = '^[a-zA-Z][a-zA-Z0-9_]*$'
 
 def reduce_stack(stack, environment={}, fail_silently=True):
@@ -116,6 +120,8 @@ def reduce_stack(stack, environment={}, fail_silently=True):
 		return float(op)
 
 def parse(expr, environment={}, fail_silently=True):
+	full_environment = function_map.copy()
+	full_environment.update(environment)
 	stack = []
 	def append_tokens(s, l, tokens):
 		stack.append(tokens[0])
@@ -129,7 +135,7 @@ def parse(expr, environment={}, fail_silently=True):
 			msg = "There was an error in your expr %s at line %s, col %s" % \
 				(expr, e.lineno, e.col)
 			raise ParseError(msg, expr, e.line, e.col, e.lineno)
-	value = reduce_stack(stack, environment=environment, 
+	value = reduce_stack(stack, environment=full_environment, 
 		fail_silently=fail_silently)
 	return value
 
