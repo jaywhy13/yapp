@@ -21,7 +21,7 @@ class YappTest(TestCase):
         for num in nums:
         	self.assertIn(str(num), decimal.parseString(str(num))[0])
 
-        tests = ["2", "x", "y", "-4", "2.13", "2.", "2 ^ 13", "2 * 4", "4 /2",
+        tests = ["'a'", "2", "x", "y", "-4", "2.13", "2.", "2 ^ 13", "2 * 4", "4 /2",
 	         "4 * 3", "5.34 * 3", "3.4 + 1", "2+3+4", "(2+3)", "2 + (3 * 4)"]
         for test in tests:
 	    	# these should give no errors
@@ -71,3 +71,17 @@ class YappTest(TestCase):
         # test booleans
         self.assertTrue(parse("abool", environment))
         self.assertFalse(parse("not(abool)", environment))
+
+        # test strings
+        self.assertTrue(parse("eq('hello', 'hello')"))
+        self.assertEqual(parse("'hello'"), "hello")
+
+        strs = ["this is a long string 12356&*#@$)("]
+        for s in strs:
+            self.assertEqual(parse("'%s'" % s), s)
+
+        # test lists
+        self.assertFalse(parse("in(1, [2,3,4])"))
+        self.assertTrue(parse("in(2, [2,3,4])"))
+        self.assertTrue(parse("in('a', ['a','b','c'])"))
+        self.assertFalse(parse("in('d', ['a','b','c'])"))

@@ -1,5 +1,6 @@
 import re
 import inspect
+import types
 
 from pyparsing import (
 	Word, Literal, alphas, alphanums, nums, Optional,
@@ -7,7 +8,8 @@ from pyparsing import (
 	Combine,
 	StringEnd,
 	ZeroOrMore,
-	Forward
+	Forward,
+	sglQuotedString
 )
 import pyparsing
 
@@ -22,7 +24,7 @@ point = Literal(".")
 number = Word(nums)
 sign = Literal("+") | Literal("-")
 integer = Combine(Optional(sign) + number)
-decimal = Combine(integer + Optional(point + Optional(number)))
+decimal = Combine(integer + point + Optional(number))
 
 # Operators
 plus = Literal("+")
@@ -43,11 +45,18 @@ relational = gte | lte | gt | lt
 # Groups
 lbrace = Literal("(").suppress()
 rbrace = Literal(")").suppress()
+lbracket = Literal("[")
+rbracket = Literal("]")
 
 stack = []
 
-
-def get_grammar(save_token_function=lambda: None):
+def get_grammar(save_token_function=lambda: None,
+		save_int_function=lambda: None,
+		save_decimal_function=lambda: None,
+		save_string_function=lambda: None,
+		save_ident_function=lambda: None,
+		save_list_function=lambda: None,
+	):
 	expr = Forward()
 	atom = Forward()
 	arg = expr
@@ -55,7 +64,9 @@ def get_grammar(save_token_function=lambda: None):
 
 	func_call = (ident + lbrace + Optional(args) + rbrace).setParseAction(save_token_function)
 
-	atom << (func_call | (lbrace + expr.suppress() + rbrace) | ( decimal | integer | ident ).setParseAction(save_token_function) )
+	bracketed_list = (lbracket + Optional(delimitedList(atom)) + rbracket).setParseAction(save_list_function)
+
+	atom << ( bracketed_list | func_call | (lbrace + expr.suppress() + rbrace)  | ( decimal.setParseAction(save_decimal_function) | integer.setParseAction(save_int_function) | ident.setParseAction(save_ident_function) | sglQuotedString.setParseAction(save_string_function) ))
 
 	factor = Forward()
 
@@ -78,15 +89,17 @@ op_map = {
 	"/" : lambda a,b: a / b,
 	"%" : lambda a,b: a % b,
 	"^" : lambda a,b: a ** b,
-	"in" : lambda a,b: a in b,
 	">" : lambda a,b : a > b,
 	"<" : lambda a,b : a < b,
 	">=" : lambda a,b : a >= b,
 	"<=" : lambda a,b : a <= b,
 }
 
+
 function_map = {
-	"not" : lambda x: not x
+	"not" : lambda x: not x,
+	"eq" : lambda x,y : x == y,
+	"in" : lambda x,y : x in y,
 }
 
 VARIABLE_REGEX = '^[a-zA-Z][a-zA-Z0-9_]*$'
@@ -95,11 +108,21 @@ def reduce_stack(stack, environment={}, fail_silently=True):
 	""" Reduces what's currently on the stack to a value
 	"""
 	op = stack.pop()
-	if op in op_map.keys():
+	if str(op).startswith("'") and str(op).endswith("'"):
+		return op[1:-1] # remove the quotes
+	elif str(op).startswith("["):
+		l = []
+		op = op[1:-1]
+		list_len = len(op)
+		for i in range(list_len):
+			l.append(stack.pop())
+		l.reverse()
+		return l
+	elif op in op_map.keys():
 		op2 = reduce_stack(stack, environment, fail_silently)
 		op1 = reduce_stack(stack, environment, fail_silently)
 		return op_map[op](op1, op2)
-	elif re.search(VARIABLE_REGEX, op):
+	elif re.search(VARIABLE_REGEX, str(op)):
 		if op in environment:
 			val = environment.get(op)
 			if inspect.ismethod(val) or inspect.isfunction(val):
@@ -114,10 +137,7 @@ def reduce_stack(stack, environment={}, fail_silently=True):
 		else:
 			if not fail_silently:
 				raise VariableMissingException("%s is not in the environment" % op, op)
-	elif re.search('^[-+]?[0-9]+$', op):
-		return long(op)
-	else:
-		return float(op)
+	return op
 
 def parse(expr, environment={}, fail_silently=True):
 	full_environment = function_map.copy()
@@ -125,9 +145,28 @@ def parse(expr, environment={}, fail_silently=True):
 	stack = []
 	def append_tokens(s, l, tokens):
 		stack.append(tokens[0])
-		#print("Adding token: %s" % tokens[0])
+		#print(" + Adding token: %s from tokens: %s" % (tokens[0], tokens))
 
-	grammar = get_grammar(append_tokens)
+	def convert_int(s, l, tokens):
+		stack.append(int(tokens[0]))
+
+	def convert_decimal(s, l, tokens):
+		stack.append(float(tokens[0]))
+
+	def convert_string(s, l, tokens):
+		stack.append(tokens[0][1:-1])
+
+	def append_list(s, l, tokens):
+		stack.append(tokens)
+
+	grammar = get_grammar(
+		append_tokens, 
+		convert_int,
+		convert_decimal,
+		convert_string,
+		append_tokens,
+		append_list)
+
 	try:
 		result = grammar.parseString(expr)
 	except pyparsing.ParseException as e:
