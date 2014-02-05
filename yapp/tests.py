@@ -22,12 +22,12 @@ class YappTest(TestCase):
         	self.assertIn(str(num), decimal.parseString(str(num))[0])
 
         tests = ["'a'", "2", "x", "y", "-4", "2.13", "2.", "2 ^ 13", "2 * 4", "4 /2",
-	         "4 * 3", "5.34 * 3", "3.4 + 1", "2+3+4", "(2+3)", "2 + (3 * 4)"]
+	         "4 * 3", "5.34 * 3", "3.4 + 1", "2+3+4", "(2+3)", "2 + (3 * 4)", "2 * 3.0"]
         for test in tests:
 	    	# these should give no errors
     		stack[:] = []
     		result = get_grammar().parseString(test)
-    		value = parse(test)
+    		value = parse(test, fail_silently=True)
     		if not re.search("[a-zA-Z]+", test):
     			test = test.replace("^", "**")
     			self.assertEquals(value, eval(test))
@@ -47,7 +47,8 @@ class YappTest(TestCase):
         self.assertEqual(parse("minus(5,2)", environment), 3)
         self.assertEqual(parse("minus(5*5,2*2)", environment), 21)
         self.assertEqual(parse("minus3(10,5,2)", environment), 3)
-        self.assertEqual(parse("x * 2", environment), 4)
+        self.assertEqual(parse("x * 3", environment), 6)
+        self.assertEqual(parse("3 * x", environment), 6)
         self.assertEqual(parse("x ^ 3", environment), 8)
         self.assertEqual(parse("x < 3", environment), True)
         self.assertEqual(parse("x > 3", environment), False)

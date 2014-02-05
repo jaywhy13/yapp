@@ -100,6 +100,8 @@ function_map = {
 	"not" : lambda x: not x,
 	"eq" : lambda x,y : x == y,
 	"in" : lambda x,y : x in y,
+	"and" : lambda a,b : a and b,
+	"or" : lambda a,b : a or b
 }
 
 VARIABLE_REGEX = '^[a-zA-Z][a-zA-Z0-9_]*$'
@@ -107,7 +109,9 @@ VARIABLE_REGEX = '^[a-zA-Z][a-zA-Z0-9_]*$'
 def reduce_stack(stack, environment={}, fail_silently=True):
 	""" Reduces what's currently on the stack to a value
 	"""
+	print(" Stack: %s" % stack)
 	op = stack.pop()
+	print(" - Popped %s" % op)
 	if str(op).startswith("'") and str(op).endswith("'"):
 		return op[1:-1] # remove the quotes
 	elif str(op).startswith("["):
@@ -133,19 +137,22 @@ def reduce_stack(stack, environment={}, fail_silently=True):
 					args.append(reduce_stack(stack, environment, fail_silently))
 				args.reverse()
 				return val(*args)
+			print(" Returning %s=%s" % (op, val))
 			return val
 		else:
 			if not fail_silently:
 				raise VariableMissingException("%s is not in the environment" % op, op)
+	print(" Returning %s" % op)
 	return op
 
 def parse(expr, environment={}, fail_silently=True):
+	print("Parsing: %s" % expr)
 	full_environment = function_map.copy()
 	full_environment.update(environment)
 	stack = []
 	def append_tokens(s, l, tokens):
 		stack.append(tokens[0])
-		#print(" + Adding token: %s from tokens: %s" % (tokens[0], tokens))
+		print(" + Adding token: %s from tokens: %s" % (tokens[0], tokens))
 
 	def convert_int(s, l, tokens):
 		stack.append(int(tokens[0]))
@@ -159,12 +166,20 @@ def parse(expr, environment={}, fail_silently=True):
 	def append_list(s, l, tokens):
 		stack.append(tokens)
 
+	def save_ident(s, l, tokens):
+		token = tokens[0]
+		if stack[-1] != token:
+			print(" + Adding ident: %s from tokens %s to stack: %s" % (tokens[0], tokens, stack))
+			stack.append(token)
+		else:
+			print(" !!! Not adding %s to %s" % (token, stack))
+
 	grammar = get_grammar(
 		append_tokens, 
 		convert_int,
 		convert_decimal,
 		convert_string,
-		append_tokens,
+		save_ident,
 		append_list)
 
 	try:
@@ -183,11 +198,14 @@ def is_valid(expr, environment={}):
 		exist.
 	"""
 	grammar = get_grammar()
+	full_environment = function_map.copy()
+	full_environment.update(environment)
 	try:
 		result = grammar.parseString(expr)
 		for token in result:
 			if re.search(VARIABLE_REGEX, token):
-				if token not in environment:
+				if token not in full_environment:
+					print("Variable %s does not exist" % token)
 					return False
 	except pyparsing.ParseException as e:
 		return False
