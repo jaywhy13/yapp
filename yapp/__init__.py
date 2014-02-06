@@ -221,15 +221,20 @@ def is_valid(expr, environment={}):
 		return False
 	return True
 
-def get_variables(expr):
+def get_variables(expr, environment={}, exclude_functions=True):
 	""" Returns a list of the variables in the expr 
 	"""
 	varlist = []
 	grammar = get_grammar()
+	full_environment = function_map.copy()
+	full_environment.update(environment)
 	try:
 		result = grammar.parseString(expr)
 		for token in result:
 			if re.search(VARIABLE_REGEX, token):
+				var = full_environment.get(token)
+				if (inspect.isfunction(var) or inspect.ismethod(var))  and exclude_functions:
+					continue
 				varlist.append(token)
 	except pyparsing.ParseException as e:
 		pass
