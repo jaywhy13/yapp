@@ -127,9 +127,7 @@ VARIABLE_REGEX = '^[a-zA-Z][a-zA-Z0-9_]*$'
 def reduce_stack(stack, environment={}, fail_silently=True):
 	""" Reduces what's currently on the stack to a value
 	"""
-	print(" Stack: %s" % stack)
 	op = stack.pop()
-	print(" - Popped %s" % op)
 	if str(op).startswith("'") and str(op).endswith("'"):
 		return op[1:-1] # remove the quotes
 	elif str(op).startswith("["):
@@ -155,21 +153,17 @@ def reduce_stack(stack, environment={}, fail_silently=True):
 					args.append(reduce_stack(stack, environment, fail_silently))
 				args.reverse()
 				return val(*args)
-			print(" Returning %s=%s" % (op, val))
 			return val
 		else:
 			if not fail_silently:
 				raise VariableMissingException("%s is not in the environment" % op, op)
-	print(" Returning %s" % op)
 	return op
 
 def parse(expr, environment={}, fail_silently=True):
-	print("=== Parsing: %s" % expr)
 	full_environment = function_map.copy()
 	full_environment.update(environment)
 	stack = []
 	def append_tokens(s, l, tokens):
-		print(" + Appending tokens: %s" % tokens[0])
 		stack.append(tokens[0])
 
 	def convert_int(s, l, tokens):
@@ -188,7 +182,6 @@ def parse(expr, environment={}, fail_silently=True):
 		stack.append(tokens[0])
 
 	def save_boolean(s, l, tokens):
-		print("SAVING BOOLEAN: %s" % tokens[0])
 		stack.append(eval(tokens[0]))
 
 	grammar = get_grammar(
@@ -223,7 +216,6 @@ def is_valid(expr, environment={}):
 		for token in result:
 			if re.search(VARIABLE_REGEX, token):
 				if token not in full_environment:
-					print("Variable %s does not exist" % token)
 					return False
 	except pyparsing.ParseException as e:
 		return False
