@@ -21,7 +21,7 @@ class YappTest(TestCase):
         for num in nums:
         	self.assertIn(str(num), decimal.parseString(str(num))[0])
 
-        tests = ["'a'", "2", "x", "y", "-4", "2.13", "2.", "2 ^ 13", "2 * 4", "4 /2",
+        tests = ["'a'", "2", "-4", "2.13", "2.", "2 ^ 13", "2 * 4", "4 /2",
 	         "4 * 3", "5.34 * 3", "3.4 + 1", "2+3+4", "(2+3)", "2 + (3 * 4)", "2 * 3.0"]
         for test in tests:
 	    	# these should give no errors
@@ -40,7 +40,8 @@ class YappTest(TestCase):
             "minus" : lambda x,y: x-y,
             "minus3" : lambda x,y,z : x-y-z,
             "x" : 2,
-            "abool" : True
+            "abool" : True,
+            "falsebool" : False
         }
         self.assertEqual(parse("foo()", environment), 2)
         self.assertEqual(parse("times2(2)", environment), 4)
@@ -49,7 +50,13 @@ class YappTest(TestCase):
         self.assertEqual(parse("minus3(10,5,2)", environment), 3)
         self.assertEqual(parse("x * 3", environment), 6)
         self.assertEqual(parse("3 * x", environment), 6)
+        self.assertEqual(parse("3 * x + x", environment), 8)
+        self.assertEqual(parse("3 * x * 5 + x", environment), 32)
         self.assertEqual(parse("x ^ 3", environment), 8)
+        self.assertEqual(parse("3 ^ x", environment), 9)
+        self.assertEqual(parse("3 * x * x", environment), 12)
+        self.assertEqual(parse("x * x", environment), 4)
+        self.assertEqual(parse("x * x * 3", environment), 12)
         self.assertEqual(parse("x < 3", environment), True)
         self.assertEqual(parse("x > 3", environment), False)
 
@@ -86,3 +93,30 @@ class YappTest(TestCase):
         self.assertTrue(parse("in(2, [2,3,4])"))
         self.assertTrue(parse("in('a', ['a','b','c'])"))
         self.assertFalse(parse("in('d', ['a','b','c'])"))
+
+        # test booleans
+        self.assertTrue(parse("True"))
+        self.assertFalse(parse("False"))
+        self.assertTrue(parse("True or True"))
+        self.assertTrue(parse("True or False"))
+        self.assertTrue(parse("True and True"))
+        self.assertTrue(parse("True and True and True"))
+        self.assertTrue(parse("True or True or True"))
+        self.assertFalse(parse("False or False"))
+        self.assertFalse(parse("True and False"))
+        self.assertFalse(parse("True and True and False"))
+        self.assertFalse(parse("True and False and False"))
+        self.assertFalse(parse("False and True and False"))
+
+        self.assertTrue(parse("abool", environment))
+        self.assertFalse(parse("falsebool", environment))
+        self.assertTrue(parse("abool or abool", environment))
+        self.assertTrue(parse("abool or falsebool", environment))
+        self.assertTrue(parse("abool and abool", environment))
+        self.assertTrue(parse("abool and abool and abool", environment))
+        self.assertTrue(parse("abool or abool or abool", environment))
+        self.assertFalse(parse("falsebool or falsebool", environment))
+        self.assertFalse(parse("abool and falsebool", environment))
+        self.assertFalse(parse("abool and abool and falsebool", environment))
+        self.assertFalse(parse("abool and falsebool and falsebool", environment))
+        self.assertFalse(parse("falsebool and abool and falsebool", environment))

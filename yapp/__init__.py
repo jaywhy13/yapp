@@ -1,6 +1,7 @@
 import re
 import inspect
 import types
+import traceback
 
 from pyparsing import (
 	Word, Literal, alphas, alphanums, nums, Optional,
@@ -9,7 +10,9 @@ from pyparsing import (
 	StringEnd,
 	ZeroOrMore,
 	Forward,
-	sglQuotedString
+	sglQuotedString,
+	opAssoc,
+	Keyword
 )
 import pyparsing
 
@@ -18,6 +21,7 @@ from yapp.exceptions import *
 # Terminal symbols =============================================================
 # Variable names and including property access
 ident = Word(alphas, alphanums + '_')
+func_name = Word(alphas, alphanums + '_')
 
 # Numbers
 point = Literal(".")
@@ -42,6 +46,12 @@ gt = Literal(">")
 lt = Literal("<")
 relational = gte | lte | gt | lt
 
+# Logical stuff
+TRUE = Literal("True")
+FALSE = Literal("False")
+BOOLEAN = TRUE | FALSE
+logicop = Literal("or") | Literal("and")
+
 # Groups
 lbrace = Literal("(").suppress()
 rbrace = Literal(")").suppress()
@@ -56,27 +66,35 @@ def get_grammar(save_token_function=lambda: None,
 		save_string_function=lambda: None,
 		save_ident_function=lambda: None,
 		save_list_function=lambda: None,
+		save_boolean_function=lambda: None
 	):
 	expr = Forward()
 	atom = Forward()
 	arg = expr
 	args = delimitedList(arg)
 
-	func_call = (ident + lbrace + Optional(args) + rbrace).setParseAction(save_token_function)
+	func_call = (func_name + lbrace + Optional(args) + rbrace).setParseAction(save_token_function)
 
 	bracketed_list = (lbracket + Optional(delimitedList(atom)) + rbracket).setParseAction(save_list_function)
 
-	atom << ( bracketed_list | func_call | (lbrace + expr.suppress() + rbrace)  | ( decimal.setParseAction(save_decimal_function) | integer.setParseAction(save_int_function) | ident.setParseAction(save_ident_function) | sglQuotedString.setParseAction(save_string_function) ))
+	terminals = ( BOOLEAN.setParseAction(save_boolean_function) | decimal.setParseAction(save_decimal_function) | 
+		integer.setParseAction(save_int_function) | 
+		ident.setParseAction(save_ident_function) | 
+		sglQuotedString.setParseAction(save_string_function) )
+
+	atom <<= ( func_call | terminals  | (lbrace + expr.suppress() + rbrace) | bracketed_list )
 
 	factor = Forward()
 
-	factor << atom + ZeroOrMore( (exponent + factor).setParseAction(save_token_function) )
+	factor <<= atom + ZeroOrMore( (exponent + factor).setParseAction(save_token_function) )
 
 	term = factor + ZeroOrMore( (multdivide + factor).setParseAction(save_token_function) )
 
 	rel_term = term + ZeroOrMore( (relational + term).setParseAction(save_token_function) )
 
-	expr << rel_term + ZeroOrMore( (plusminus + rel_term).setParseAction(save_token_function) )
+	plusminus_term = rel_term + ZeroOrMore( (plusminus + rel_term).setParseAction(save_token_function) ) 
+
+	expr <<= plusminus_term + ZeroOrMore( (logicop + plusminus_term).setParseAction(save_token_function) )
 
 	# Define the grammar now ...
 	grammar = expr + StringEnd()
@@ -146,13 +164,13 @@ def reduce_stack(stack, environment={}, fail_silently=True):
 	return op
 
 def parse(expr, environment={}, fail_silently=True):
-	print("Parsing: %s" % expr)
+	print("=== Parsing: %s" % expr)
 	full_environment = function_map.copy()
 	full_environment.update(environment)
 	stack = []
 	def append_tokens(s, l, tokens):
+		print(" + Appending tokens: %s" % tokens[0])
 		stack.append(tokens[0])
-		print(" + Adding token: %s from tokens: %s" % (tokens[0], tokens))
 
 	def convert_int(s, l, tokens):
 		stack.append(int(tokens[0]))
@@ -167,12 +185,11 @@ def parse(expr, environment={}, fail_silently=True):
 		stack.append(tokens)
 
 	def save_ident(s, l, tokens):
-		token = tokens[0]
-		if stack[-1] != token:
-			print(" + Adding ident: %s from tokens %s to stack: %s" % (tokens[0], tokens, stack))
-			stack.append(token)
-		else:
-			print(" !!! Not adding %s to %s" % (token, stack))
+		stack.append(tokens[0])
+
+	def save_boolean(s, l, tokens):
+		print("SAVING BOOLEAN: %s" % tokens[0])
+		stack.append(eval(tokens[0]))
 
 	grammar = get_grammar(
 		append_tokens, 
@@ -180,7 +197,8 @@ def parse(expr, environment={}, fail_silently=True):
 		convert_decimal,
 		convert_string,
 		save_ident,
-		append_list)
+		append_list,
+		save_boolean)
 
 	try:
 		result = grammar.parseString(expr)
