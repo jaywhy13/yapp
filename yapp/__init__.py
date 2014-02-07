@@ -138,7 +138,7 @@ def reduce_stack(stack, environment={}, fail_silently=True):
 		op = op[1:-1]
 		list_len = len(op)
 		for i in range(list_len):
-			l.append(stack.pop())
+			l.append(reduce_stack(stack, environment, fail_silently))
 		l.reverse()
 		return l
 	elif op in op_map.keys():
@@ -176,7 +176,7 @@ def parse(expr, environment={}, fail_silently=True):
 		stack.append(float(tokens[0]))
 
 	def convert_string(s, l, tokens):
-		stack.append(tokens[0][1:-1])
+		stack.append(tokens[0])
 
 	def append_list(s, l, tokens):
 		stack.append(tokens)
