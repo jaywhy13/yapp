@@ -120,3 +120,18 @@ class YappTest(TestCase):
         self.assertFalse(parse("abool and abool and falsebool", environment))
         self.assertFalse(parse("abool and falsebool and falsebool", environment))
         self.assertFalse(parse("falsebool and abool and falsebool", environment))
+
+
+        # test equality
+        self.assertTrue(parse("2 eq 2", environment))
+        self.assertTrue(parse("2 == 2", environment))
+        self.assertTrue(parse("abool == abool", environment))
+        self.assertTrue(parse("falsebool == falsebool", environment))
+        self.assertTrue(parse("abool == True", environment))
+        self.assertTrue(parse("falsebool == False", environment))
+        self.assertTrue(parse("falsebool eq falsebool", environment))
+        self.assertTrue(parse("abool eq True", environment))
+        self.assertTrue(parse("falsebool eq False", environment))
+        self.assertFalse(parse("2 eq 3", environment))
+        self.assertFalse(parse("abool eq falsebool", environment))
+

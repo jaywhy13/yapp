@@ -38,6 +38,7 @@ divide = Literal("/")
 exponent = Literal("^")
 mod = Literal("%")
 inop = Literal("in")
+eqop = Literal("==") | Literal("eq")
 plusminus = plus | minus
 multdivide = mult | divide | mod
 gte = Literal(">=")
@@ -84,9 +85,11 @@ def get_grammar(save_token_function=lambda: None,
 
 	atom <<= ( func_call | terminals  | (lbrace + expr.suppress() + rbrace) | bracketed_list )
 
-	factor = Forward()
+	eq_factor = Forward()
 
-	factor <<= atom + ZeroOrMore( (exponent + factor).setParseAction(save_token_function) )
+	eq_factor <<= atom + ZeroOrMore( (eqop + eq_factor).setParseAction(save_token_function) )
+
+	factor = eq_factor + ZeroOrMore( (exponent + eq_factor).setParseAction(save_token_function) )
 
 	term = factor + ZeroOrMore( (multdivide + factor).setParseAction(save_token_function) )
 
