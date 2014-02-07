@@ -41,7 +41,8 @@ class YappTest(TestCase):
             "minus3" : lambda x,y,z : x-y-z,
             "x" : 2,
             "abool" : True,
-            "falsebool" : False
+            "falsebool" : False,
+            "salutation" : "hello"
         }
         self.assertEqual(parse("foo()", environment), 2)
         self.assertEqual(parse("times2(2)", environment), 4)
@@ -82,6 +83,9 @@ class YappTest(TestCase):
 
         # test strings
         self.assertTrue(parse("eq('hello', 'hello')"))
+        self.assertTrue(parse("'hello' eq 'hello'"))
+        self.assertTrue(parse("salutation eq 'hello'", environment))
+        self.assertTrue(parse("'hello' eq salutation", environment))
         self.assertEqual(parse("'hello'"), "hello")
 
         strs = ["this is a long string 12356&*#@$)("]

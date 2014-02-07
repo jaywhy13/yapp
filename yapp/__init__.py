@@ -159,7 +159,7 @@ def reduce_stack(stack, environment={}, fail_silently=True):
 			return val
 		else:
 			if not fail_silently:
-				raise VariableMissingException("%s is not in the environment" % op, op)
+				raise VariableMissingException("Variable %s is not in the environment" % op, op)
 	return op
 
 def parse(expr, environment={}, fail_silently=True):
