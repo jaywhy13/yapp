@@ -83,7 +83,7 @@ def get_grammar(save_token_function=lambda: None,
 		ident.setParseAction(save_ident_function) | 
 		sglQuotedString.setParseAction(save_string_function) )
 
-	atom <<= ( func_call | terminals  | (lbrace + expr.suppress() + rbrace) | bracketed_list )
+	atom <<= ( func_call | terminals  | (lbrace + expr + rbrace) | bracketed_list )
 
 	eq_factor = Forward()
 

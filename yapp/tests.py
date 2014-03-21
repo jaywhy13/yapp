@@ -63,6 +63,8 @@ class YappTest(TestCase):
 
         # test variables required
         self.assertEqual(["x"], get_variables("x > 3"))
+        self.assertEqual(["x"], get_variables("(x+3)*3"))
+        self.assertEqual(["x"], get_variables("((x+3)*3)"))
 
         # test validity checking
         self.assertTrue(is_valid("x * 2", environment))
